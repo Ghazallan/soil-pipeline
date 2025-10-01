@@ -1,0 +1,12 @@
+name: humann_env
+channels:
+  - defaults
+  - conda-forge
+  - bioconda
+  - biobakery
+dependencies:
+  - python=3.8
+  - humann=3.9
+  - metaphlan=3.0.14
+  - bowtie2>=2.3
+  - diamond>=0.9.36

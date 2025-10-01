@@ -1,0 +1,13 @@
+name: r_stats
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.2.3
+  - r-vegan=2.5.7
+  - r-indicspecies=1.7.12
+  - r-labdsv=2.0.1
+  - r-tidyverse=1.3.1
+  - r-ggrepel=0.9.1
+  - r-ggpubr=0.4.0
+  - r-argparse=2.0.3
