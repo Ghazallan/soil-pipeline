@@ -5,14 +5,14 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=kraken_%A_%a.out
 #SBATCH --error=kraken_%A_%a.err
-#SBATCH --array=1-$(ls /project/def-yuezhang/hazad25/project/raw_sample/*_R1.fastq.gz | wc -l)
+#SBATCH --array=1-2   # <-- fixed number of samples
 
 module load kraken2/2.1.3
-module load bracken/3.0
+module load bracken/2.8
 
-# Paths
+# ---- Paths ----
 export KRAKEN_DB=/project/def-yuezhang/hazad25/project/database/kraken2_db
-DATA_DIR=/project/def-yuezhang/hazad25/project/raw_sample 
+DATA_DIR=/project/def-yuezhang/hazad25/project/raw_sample
 OUT_DIR=/project/def-yuezhang/hazad25/project/results
 
 mkdir -p $OUT_DIR
@@ -24,10 +24,8 @@ SAMPLE=${SAMPLES[$((SLURM_ARRAY_TASK_ID-1))]}
 R1=${DATA_DIR}/${SAMPLE}_R1.fastq
 R2=${DATA_DIR}/${SAMPLE}_R2.fastq
 
-echo "[$(date)] Starting Kraken2 for sample: ${SAMPLE}"
-echo "Using reads:"
-echo "R1 = ${R1}"
-echo "R2 = ${R2}"
+echo "[$(date)] Processing sample: ${SAMPLE}"
+echo "Input reads: $R1 and $R2"
 
 # ---- Run Kraken2 ----
 kraken2 \
@@ -44,4 +42,4 @@ bracken \
   -o ${OUT_DIR}/${SAMPLE}.bracken \
   -r 150 -l S
 
-echo "[$(date)] Finished processing ${SAMPLE}"
+echo "[$(date)] Finished ${SAMPLE}"
