@@ -12,23 +12,24 @@ module load bracken/3.0
 
 # Paths
 export KRAKEN_DB=/project/def-yuezhang/hazad25/project/database/kraken2_db
-DATA_DIR=/project/def-yuezhang/hazad25/project/raw_sample
+DATA_DIR=/project/def-yuezhang/hazad25/project/raw_sample 
 OUT_DIR=/project/def-yuezhang/hazad25/project/results
 
 mkdir -p $OUT_DIR
 
-# Generate sample list dynamically (once per job)
-SAMPLE_LIST=($(ls ${DATA_DIR}/*_R1.fastq.gz | sed 's/_R1.fastq.gz//' | xargs -n1 basename))
-SAMPLE=${SAMPLE_LIST[$((SLURM_ARRAY_TASK_ID-1))]}
+# ---- Sample list ----
+SAMPLES=("SCBI_012" "WOOD_002")
+SAMPLE=${SAMPLES[$((SLURM_ARRAY_TASK_ID-1))]}
 
-R1=${DATA_DIR}/${SAMPLE}_R1.fastq.gz
-R2=${DATA_DIR}/${SAMPLE}_R2.fastq.gz
+R1=${DATA_DIR}/${SAMPLE}_R1.fastq
+R2=${DATA_DIR}/${SAMPLE}_R2.fastq
 
-echo "[$(date)] Processing sample: ${SAMPLE}"
-echo "R1: $R1"
-echo "R2: $R2"
+echo "[$(date)] Starting Kraken2 for sample: ${SAMPLE}"
+echo "Using reads:"
+echo "R1 = ${R1}"
+echo "R2 = ${R2}"
 
-# Run Kraken2 classification
+# ---- Run Kraken2 ----
 kraken2 \
   --db $KRAKEN_DB \
   --threads 16 \
@@ -36,11 +37,11 @@ kraken2 \
   --output ${OUT_DIR}/${SAMPLE}.kraken \
   $R1 $R2
 
-# Run Bracken abundance estimation
+# ---- Run Bracken ----
 bracken \
   -d $KRAKEN_DB \
   -i ${OUT_DIR}/${SAMPLE}.report \
   -o ${OUT_DIR}/${SAMPLE}.bracken \
   -r 150 -l S
 
-echo "[$(date)] Finished ${SAMPLE}"
+echo "[$(date)] Finished processing ${SAMPLE}"
