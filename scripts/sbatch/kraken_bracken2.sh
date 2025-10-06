@@ -8,7 +8,7 @@
 #SBATCH --array=1-2   # <-- fixed number of samples
 
 module load kraken2/2.1.3
-module load bracken/2.8
+module load bracken/3.0
 
 # ---- Paths ----
 export KRAKEN_DB=/project/def-yuezhang/hazad25/project/database/kraken2_db
