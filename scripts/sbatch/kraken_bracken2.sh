@@ -31,6 +31,8 @@ echo "Input reads: $R1 and $R2"
 kraken2 \
   --db $KRAKEN_DB \
   --threads 16 \
+  --use-names \
+  --report-zero-counts \
   --report ${OUT_DIR}/${SAMPLE}.report \
   --output ${OUT_DIR}/${SAMPLE}.kraken \
   $R1 $R2
