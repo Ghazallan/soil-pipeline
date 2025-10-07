@@ -8,7 +8,7 @@ import re
 # 1. Connect to Galaxy
 # ------------------------------
 GALAXY_URL = "https://usegalaxy.eu/"
-API_KEY = "YOUR_API_KEY_HERE"  # <-- Replace with your API key
+API_KEY = "5f59788da0ca1fe9a3888de0beade579"  
 
 gi = GalaxyInstance(GALAXY_URL, key=API_KEY)
 
