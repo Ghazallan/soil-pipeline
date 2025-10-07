@@ -87,7 +87,7 @@ for sample, files in pairs.items():
     }
 
     # Run the workflow
-    gi.workflows.run_workflow(workflow_id=workflow_id, history_id=history["id"], inputs=inputs)
+    gi.workflows.get_workflow(workflow_id=workflow_id, history_id=history["id"], inputs=inputs)
     print(f"🧩 Running MetaPhlAn workflow for {sample}...")
 
     # Monitor until complete
