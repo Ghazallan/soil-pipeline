@@ -11,7 +11,7 @@ sampled_metadata_file = "/home/hazad25/projects/sample_per_site.csv"
 df_sampled = pd.read_csv(sampled_metadata_file)
 
 # Directory to save downloaded files in $PROJECT
-download_neon_dir = "/home/hazad25/projects/neon_data"
+download_neon_dir = "/project/def-yuezhang/hazad25/project/neon_data"
 os.makedirs(download_neon_dir, exist_ok=True)
 
 print(f"\n🔽 Starting downloads of {len(df_sampled)} files...")
