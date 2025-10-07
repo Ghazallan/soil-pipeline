@@ -5,7 +5,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=kraken_%A_%a.out
 #SBATCH --error=kraken_%A_%a.err
-#SBATCH --array=1-2   # <-- fixed number of samples
+#SBATCH --array=1-2   # <-- number of samples
 
 module load StdEnv/2023
 module load kraken2/2.1.3
@@ -16,7 +16,7 @@ export KRAKEN_DB=/project/def-yuezhang/hazad25/project/database/kraken2_db
 DATA_DIR=/project/def-yuezhang/hazad25/project/raw_sample
 OUT_DIR=/project/def-yuezhang/hazad25/project/results
 
-mkdir -p $OUT_DIR
+mkdir -p "$OUT_DIR"
 
 # ---- Sample list ----
 SAMPLES=("SCBI_012" "WOOD_002")
@@ -54,12 +54,25 @@ echo "[$(date)] Kraken2 completed successfully for ${SAMPLE}"
 echo "---------------------------------------------------------"
 
 # =========================================================
+# Amend Kraken report (make it Bracken-compliant)
+# =========================================================
+echo "[$(date)] Reformatting Kraken report for ${SAMPLE}..."
+awk '{$1=$1}1' OFS='\t' "${OUT_DIR}/${SAMPLE}.kraken_report" > "${OUT_DIR}/${SAMPLE}_amend.report"
+
+if [[ $? -ne 0 ]]; then
+  echo "[$(date)] ERROR: Failed to amend Kraken report for ${SAMPLE}"
+  exit 1
+fi
+echo "[$(date)] Amended report created: ${OUT_DIR}/${SAMPLE}_amend.report"
+echo "---------------------------------------------------------"
+
+# =========================================================
 # Run Bracken
 # =========================================================
 echo "[$(date)] Running Bracken for ${SAMPLE}..."
 bracken \
   -d "$KRAKEN_DB" \
-  -i "${OUT_DIR}/${SAMPLE}.kraken_report" \
+  -i "${OUT_DIR}/${SAMPLE}_amend.report" \
   -o "${OUT_DIR}/${SAMPLE}.bracken_report" \
   -r 150 -l S -t $SLURM_CPUS_PER_TASK
 
@@ -91,3 +104,4 @@ if [[ $SLURM_ARRAY_TASK_ID -eq ${#SAMPLES[@]} ]]; then
 fi
 
 echo "[$(date)] Finished processing sample: ${SAMPLE}"
+echo "========================================================="

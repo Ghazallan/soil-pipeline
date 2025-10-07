@@ -10,4 +10,15 @@ module load kraken2/2.1.3
 
 cd /project/def-yuezhang/hazad25/project/database/kraken2_db_new
 
+# 🧬 Step 1: Download taxonomy
+kraken2-build --download-taxonomy --db .
+
+# 🧫 Step 2: Download only Bacteria and Archaea libraries
+# kraken2-build --download-library bacteria --db .
+# kraken2-build --download-library archaea --db .
+
+# 🧱 Step 3: Build database
 kraken2-build --build --db . --threads 16
+
+# 🧹 Step 4: Clean temporary files
+kraken2-build --clean --db .
