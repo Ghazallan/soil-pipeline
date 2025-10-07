@@ -7,8 +7,8 @@ import re
 # ------------------------------
 # 1. Connect to Galaxy
 # ------------------------------
-GALAXY_URL = "https://usegalaxy.org"
-API_KEY = "ab7abad43988b720c5503ad0ca7aa415"
+GALAXY_URL = "https://usegalaxy.eu/"
+API_KEY = "YOUR_API_KEY_HERE"  # <-- Replace with your API key
 
 gi = GalaxyInstance(GALAXY_URL, key=API_KEY)
 
@@ -38,31 +38,32 @@ for f in fastqs:
 print(f"🧾 Found {len(pairs)} paired samples: {list(pairs.keys())}")
 
 # ------------------------------
-# 4. Get MetaPhlAn workflow
+# 4. Find MetaPhlAn Tool
 # ------------------------------
-workflow_name = "Taxanomy_Metaphlan"  # must match your Galaxy workflow name
-workflows = gi.workflows.get_workflows(name=workflow_name)
-if not workflows:
-    raise ValueError(f"❌ Workflow '{workflow_name}' not found on Galaxy.")
-workflow_id = workflows[0]["id"]
-print(f"⚙️ Using workflow: {workflow_name} ({workflow_id})")
+print("🔍 Searching for MetaPhlAn tool...")
+tools = gi.tools.get_tools(name="MetaPhlAn")
+if not tools:
+    raise ValueError("❌ MetaPhlAn tool not found on this Galaxy instance.")
+metaphlan_tool_id = tools[0]["id"]
+print(f"⚙️ Using tool: {tools[0]['name']} ({metaphlan_tool_id})")
 
 # ------------------------------
-# 5. Define monitor function
+# 5. Define monitoring function
 # ------------------------------
-def monitor_workflow(gi, history_id, sample_name):
-    print(f"⏳ Monitoring workflow for sample: {sample_name}")
+def monitor_history(gi, history_id, sample_name):
+    """Wait until all datasets in a history are complete."""
+    print(f"⏳ Monitoring MetaPhlAn job for {sample_name}...")
     while True:
         datasets = gi.histories.show_history(history_id, contents=True)
         states = [d["state"] for d in datasets]
-        if all(state in ["ok", "error"] for state in states):
+        if all(s in ["ok", "error"] for s in states):
             break
-        print(f"  Current states: {states}")
+        print(f"  Current dataset states: {states}")
         time.sleep(60)
-    print(f"✅ Workflow finished for {sample_name}")
+    print(f"✅ MetaPhlAn job finished for {sample_name}")
 
 # ------------------------------
-# 6. Run workflow for each pair
+# 6. Run MetaPhlAn for each sample pair
 # ------------------------------
 for sample, files in pairs.items():
     if not files["R1"] or not files["R2"]:
@@ -75,25 +76,36 @@ for sample, files in pairs.items():
     history = gi.histories.create_history(name=f"{sample}_MetaPhlAn")
     print(f"🧬 Created history: {history['name']} ({history['id']})")
 
-    # Upload both files
+    # Upload both reads
     print(f"📤 Uploading {files['R1']} and {files['R2']}")
     up_R1 = gi.tools.upload_file(files["R1"], history["id"])
     up_R2 = gi.tools.upload_file(files["R2"], history["id"])
+    r1_id = up_R1["outputs"][0]["id"]
+    r2_id = up_R2["outputs"][0]["id"]
 
-    # Prepare inputs (adjust IDs if your workflow expects different inputs)
+    # Prepare MetaPhlAn input
+    # Adjust parameter names to match tool definition on your Galaxy instance
     inputs = {
-        "0": {"src": "hda", "id": up_R1["outputs"][0]["id"]},
-        "1": {"src": "hda", "id": up_R2["outputs"][0]["id"]},
+        "input_reads": [
+            {"src": "hda", "id": r1_id},
+            {"src": "hda", "id": r2_id}
+        ],
+        # Optional: add params like number of threads or database version here
+        # "nproc": "8",
+        # "database": "mpa_vJan21_CHOCOPhlAnSGB_202103"
     }
 
-    # Run the workflow
-    gi.workflows.invoke_workflow(workflow_id=workflow_id, history_id=history["id"], inputs=inputs)
-    print(f"🧩 Running MetaPhlAn workflow for {sample}...")
+    # Run MetaPhlAn
+    print(f"🧩 Running MetaPhlAn on sample: {sample}")
+    run = gi.tools.run_tool(history["id"], metaphlan_tool_id, inputs)
+    job_id = run["jobs"][0]["id"]
+    print(f"🧠 Submitted job ID: {job_id}")
 
-    # Monitor until complete
-    monitor_workflow(gi, history["id"], sample)
+    # Monitor job completion
+    monitor_history(gi, history["id"], sample)
 
     # Download results
+    print(f"⬇️ Downloading results for {sample}")
     datasets = gi.histories.show_history(history["id"], contents=True)
     sample_outdir = os.path.join(output_dir, sample)
     os.makedirs(sample_outdir, exist_ok=True)
@@ -102,10 +114,15 @@ for sample, files in pairs.items():
         if ds["state"] == "ok":
             safe_name = ds["name"].replace(" ", "_").replace("/", "_")
             output_path = os.path.join(sample_outdir, f"{safe_name}.dat")
-            print(f"⬇️ Downloading {ds['name']} → {output_path}")
-            gi.datasets.download_dataset(ds["id"], file_path=output_path, use_default_filename=False)
+            print(f"   ⬇️ {ds['name']} → {output_path}")
+            gi.datasets.download_dataset(
+                ds["id"],
+                file_path=output_path,
+                use_default_filename=False,
+                wait_for_completion=True
+            )
 
-    print(f"📁 Results saved to: {sample_outdir}")
+    print(f"📁 Results saved in: {sample_outdir}")
 
-print("\n🎉 All paired samples processed successfully!")
-print(f"All results are in: {output_dir}")
+print("\n🎉 All MetaPhlAn jobs completed successfully!")
+print(f"Results directory: {output_dir}")
