@@ -38,10 +38,9 @@ for file in files:
     df = df.iloc[:, [0, 2]] if df.shape[1] >= 3 else df.iloc[:, [0, 1]]
     df.columns = ["clade_name", "relative_abundance"]
 
-    # Extract sample ID like GUAN_049 from filename
+    # Extract sample ID (e.g. GUAN_049)
     match = re.search(r"([A-Z]{2,5}_\d{3})", file)
     sample_id = match.group(1) if match else os.path.splitext(file)[0]
-
     df = df.rename(columns={"relative_abundance": sample_id})
 
     # Merge into master table
@@ -56,51 +55,64 @@ merged_df.to_csv(f"{output_base}.tsv", sep="\t", index=False)
 print(f"✅ Saved merged file: {output_base}.tsv")
 
 # --------------------------------------------------
-# 5️⃣ Split and extract exact taxonomic levels
+# 5️⃣ Split and prepare taxonomy columns
 # --------------------------------------------------
 taxa_levels = ["kingdom", "phylum", "class", "order", "family", "genus", "species", "strain"]
+
 split_cols = merged_df["clade_name"].str.split("|", expand=True)
 split_cols.columns = taxa_levels[:split_cols.shape[1]]
 df = pd.concat([merged_df, split_cols], axis=1)
 
+# Identify sample columns
 sample_cols = [c for c in df.columns if c not in ["clade_name"] + taxa_levels]
 df[sample_cols] = df[sample_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
 
+# Prepare output directory
 output_dir = os.path.join(input_dir, "merged_by_taxonomic_level")
 os.makedirs(output_dir, exist_ok=True)
 
 # --------------------------------------------------
-# 6️⃣ Extract data by level (no aggregation)
+# 6️⃣ Extract only the exact taxon level (no parent lines)
 # --------------------------------------------------
 for level in taxa_levels:
     if level not in df.columns:
         continue
 
-    # Keep only rows where this level is the last defined (exact level)
     level_idx = taxa_levels.index(level)
+
+    # Keep only rows where this level is the last defined (exact level)
     mask = df[taxa_levels[level_idx + 1:]].isna().all(axis=1)
     sub_df = df[mask].copy()
+    if sub_df.empty:
+        continue
+
+    # Keep only entries that contain this exact level (e.g., |p__ for phylum)
+    if level_idx > 0:
+        pattern = rf"\|{level[0]}__"
+        sub_df = sub_df[sub_df["clade_name"].str.contains(pattern, regex=True, na=False)]
+    else:
+        # For kingdom level, keep only k__ entries without a deeper |
+        sub_df = sub_df[~sub_df["clade_name"].str.contains(r"\|", regex=True, na=False)]
 
     if sub_df.empty:
         continue
 
-    # Create taxonomy_path up to this level
+    # Create taxonomy path up to this level
     sub_df["taxonomy_path"] = sub_df[taxa_levels[: level_idx + 1]].apply(
         lambda r: "|".join([x for x in r if pd.notna(x)]), axis=1
     )
 
-    # Reorder columns: taxonomy_path + samples
-    out_df = sub_df[["taxonomy_path"] + sample_cols]
+    # Collapse duplicates and sum across samples
+    sub_df = sub_df.groupby("taxonomy_path", as_index=False)[sample_cols].sum()
 
-    # Add total column (sum across all samples)
-    out_df.insert(1, "merged_metaphlan_outputs_all_levels", out_df[sample_cols].sum(axis=1))
+    # Add total abundance column
+    sub_df.insert(1, "total_abundance", sub_df[sample_cols].sum(axis=1))
 
-    # Save TSV file
+    # Save output
     out_path = os.path.join(output_dir, f"merged_{level}_level.tsv")
-    out_df.to_csv(out_path, sep="\t", index=False)
+    sub_df.to_csv(out_path, sep="\t", index=False)
 
-    print(f"✅ Saved exact {level}-level file: {out_path}")
-    print(f"📊 Shape: {out_df.shape[0]} taxa × {out_df.shape[1]-1} samples\n")
+    print(f"✅ Saved {level}-only file: {out_path}")
+    print(f"📊 {sub_df.shape[0]} taxa × {len(sample_cols)} samples\n")
 
-print("🎉 Done! Extracted exact per-level MetaPhlAn abundance tables.")
-
+print("🎉 Done! Each taxon level file now includes only rows exactly at that level (no parent taxa).")
