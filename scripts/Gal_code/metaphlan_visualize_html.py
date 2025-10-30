@@ -114,7 +114,7 @@ def generate_metaphlan_sunburst(input_path, output_dir):
 # ==============================================================
 # Batch process all MetaPhlAn outputs in a folder
 # ==============================================================
-input_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Galaxy_output\MetaphlanOutput.rocrate\relative_abundances"
+input_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Ga_output\MetaphlanOutput.rocrate\relative_abundances"
 output_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Soil_Pipeline\soil-pipeline\Metaphlan_sunburst_all_levels"
 
 for file in os.listdir(input_dir):

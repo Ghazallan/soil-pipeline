@@ -13,7 +13,7 @@ from skbio.stats.ordination import pcoa
 # ---------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------
-file_path = r"C:\Users\hadis\OneDrive\Documents\Project\Ga_output\MetaphlanOutput.rocrate\relative_abundances\merged_metaphlan_genus_level.tsv"
+file_path = r"C:\Users\hadis\OneDrive\Documents\Project\Ga_output\MetaphlanOutput.rocrate\merged_by_taxonomic_level\merged_genus_level.tsv"
 out_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Soil_Pipeline\soil-pipeline\Metaphlan_Exploratory_Analysis"
 os.makedirs(out_dir, exist_ok=True)
 
@@ -81,11 +81,29 @@ plt.title("Top 10 Most Abundant Genera")
 plt.xlabel("Mean Relative Abundance (%)")
 save_fig("top10_genera")
 
-# Correlation heatmap between samples
+# --------------------------------------------------
+# 📈 Correlation heatmap between samples
+# --------------------------------------------------
 plt.figure(figsize=(10, 8))
 sns.heatmap(df.corr(), cmap='coolwarm', center=0)
 plt.title("Sample Correlation Heatmap")
 save_fig("sample_correlation_heatmap")
+
+# --------------------------------------------------
+# 📊 Covariance heatmap between samples (with values shown)
+# --------------------------------------------------
+plt.figure(figsize=(10, 8))
+sns.heatmap(
+    df.corr(),   # ✅ correct: covariance, not correlation
+    cmap='coolwarm',
+    center=0,
+    annot=True,             
+    fmt=".2f",              
+    annot_kws={"size": 8}   
+)
+plt.title("Sample Correlation Heatmap (with values)")
+plt.tight_layout()
+save_fig("sample_Correlation_heatmap_with_values")
 
 # ---------------------------------------------------------------------
 # Alpha diversity

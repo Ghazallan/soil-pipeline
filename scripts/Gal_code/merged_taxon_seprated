@@ -6,7 +6,10 @@ import re
 # 1️⃣ Define directories
 # --------------------------------------------------
 input_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Ga_output\MetaphlanOutput.rocrate\relative_abundances"
-output_base = os.path.join(input_dir, "merged_metaphlan_outputs_all_levels")
+output_dir = r"C:\Users\hadis\OneDrive\Documents\Project\Ga_output\MetaphlanOutput.rocrate\merged_by_taxonomic_level"
+
+# Create output directory if missing
+os.makedirs(output_dir, exist_ok=True)
 
 # --------------------------------------------------
 # 2️⃣ Find all MetaPhlAn output files
@@ -51,8 +54,11 @@ for file in files:
 # --------------------------------------------------
 merged_df = merged_df.fillna(0)
 merged_df = merged_df.sort_values("clade_name")
-merged_df.to_csv(f"{output_base}.tsv", sep="\t", index=False)
-print(f"✅ Saved merged file: {output_base}.tsv")
+
+# Save main merged file
+merged_out_path = os.path.join(output_dir, "merged_all_levels.tsv")
+merged_df.to_csv(merged_out_path, sep="\t", index=False)
+print(f"✅ Saved merged file: {merged_out_path}")
 
 # --------------------------------------------------
 # 5️⃣ Split and prepare taxonomy columns
@@ -66,10 +72,6 @@ df = pd.concat([merged_df, split_cols], axis=1)
 # Identify sample columns
 sample_cols = [c for c in df.columns if c not in ["clade_name"] + taxa_levels]
 df[sample_cols] = df[sample_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
-
-# Prepare output directory
-output_dir = os.path.join(input_dir, "merged_by_taxonomic_level")
-os.makedirs(output_dir, exist_ok=True)
 
 # --------------------------------------------------
 # 6️⃣ Extract only the exact taxon level (no parent lines)
@@ -97,10 +99,22 @@ for level in taxa_levels:
     if sub_df.empty:
         continue
 
-    # Create taxonomy path up to this level
-    sub_df["taxonomy_path"] = sub_df[taxa_levels[: level_idx + 1]].apply(
-        lambda r: "|".join([x for x in r if pd.notna(x)]), axis=1
-    )
+    # ✅ Simplify taxonomy path: always include kingdom + current level
+    if level == "genus":
+        # Keep only kingdom, phylum, genus
+        sub_df["taxonomy_path"] = sub_df[["kingdom", "phylum", "genus"]].apply(
+            lambda r: "|".join([x for x in r if pd.notna(x)]), axis=1
+        )
+    elif level == "species":
+        # (optional example) kingdom | phylum | species
+        sub_df["taxonomy_path"] = sub_df[["kingdom", "phylum", "species"]].apply(
+            lambda r: "|".join([x for x in r if pd.notna(x)]), axis=1
+        )
+    else:
+        # Default: include full path up to this level
+        sub_df["taxonomy_path"] = sub_df[taxa_levels[: level_idx + 1]].apply(
+            lambda r: "|".join([x for x in r if pd.notna(x)]), axis=1
+        )
 
     # Collapse duplicates and sum across samples
     sub_df = sub_df.groupby("taxonomy_path", as_index=False)[sample_cols].sum()
@@ -114,5 +128,3 @@ for level in taxa_levels:
 
     print(f"✅ Saved {level}-only file: {out_path}")
     print(f"📊 {sub_df.shape[0]} taxa × {len(sample_cols)} samples\n")
-
-print("🎉 Done! Each taxon level file now includes only rows exactly at that level (no parent taxa).")
